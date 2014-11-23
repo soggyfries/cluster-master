@@ -16,6 +16,7 @@ var cluster = require("cluster")
 , minRestartAge = 2000
 , killTimeout = 5000
 , danger = false
+, dying = []
 
 exports = module.exports = clusterMaster
 exports.restart = restart
@@ -187,7 +188,7 @@ function setupRepl () {
           var a = select('age')
           return Object.keys(cluster.workers).map(function (k) {
             return new Worker({ id: k, pid: p[k], state: s[k], age: a[k] })
-          })
+          }).concat(Object.keys(dying).map( function(k) { return dying[k] }))
         },
         select: select,
         get pids () {
@@ -256,8 +257,8 @@ Worker.prototype.disconnect = function () {
   cluster.workers[this.id].disconnect()
 }
 
-Worker.prototype.kill = function () {
-  process.kill(this.pid)
+Worker.prototype.kill = function (signal) {
+  process.kill(this.pid, signal)
 }
 
 
@@ -294,10 +295,13 @@ function forkListener () {
       if (Object.keys(cluster.workers).length < clusterSize && !resizing) {
         resize()
       }
+
+      delete dying[worker.id];
     })
 
     worker.on("disconnect", function () {
       debug("Worker %j disconnect", id)
+      dying[worker.id] = new Worker({ id: worker.id, pid: worker.pid, state: 'zombie' });
       // give it 1 second to shut down gracefully, or kill
       disconnectTimer = setTimeout(function () {
         debug("Worker %j, forcefully killing", id)
@@ -482,6 +486,10 @@ function quit () {
       var w = cluster.workers[id]
       if (w && w.process) w.process.kill("SIGKILL")
     })
+
+    // try to kill the dying too
+    dying.forEach( function(i) { i.kill("SIGKILL") });
+
     process.exit(1)
   }
 
