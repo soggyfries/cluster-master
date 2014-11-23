@@ -14,6 +14,7 @@ var cluster = require("cluster")
 , fs = require('fs')
 , util = require('util')
 , minRestartAge = 2000
+, killTimeout = 5000
 , danger = false
 
 exports = module.exports = clusterMaster
@@ -64,6 +65,8 @@ function clusterMaster (config) {
   clusterSize = config.size || os.cpus().length
 
   minRestartAge = config.minRestartAge || minRestartAge
+
+  killTimeout = config.killTimeout || killTimeout
 
   env = config.env
 
@@ -299,7 +302,7 @@ function forkListener () {
       disconnectTimer = setTimeout(function () {
         debug("Worker %j, forcefully killing", id)
         worker.process.kill("SIGKILL")
-      }, 5000)
+      }, killTimeout)
     })
   })
 }
