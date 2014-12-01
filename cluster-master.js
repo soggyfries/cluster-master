@@ -301,7 +301,7 @@ function forkListener () {
 
     worker.on("disconnect", function () {
       debug("Worker %j disconnect", id)
-      dying[worker.id] = new Worker({ id: worker.id, pid: worker.pid, state: 'zombie' });
+      dying[worker.id] = new Worker({ id: worker.id, pid: worker.pid, state: 'dying' });
       // give it 1 second to shut down gracefully, or kill
       disconnectTimer = setTimeout(function () {
         debug("Worker %j, forcefully killing", id)
